@@ -1,0 +1,155 @@
+---
+title: "Gym Analysis Projecg"
+author: "Lex Chaffee"
+date: "2025-01-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Libraries, echo=FALSE, results="hide", message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(readr)
+```
+
+
+```{r Data, echo=FALSE, results="hide", message=FALSE, warning=FALSE}
+# read in data from csv file
+gym_data <- read_csv("gym_members_exercise_tracking.csv")
+
+# Shorten column names
+colnames(gym_data) <- c("Age", "Gender", "Weight", "Height", "MaxBPM", "AvgBPM", "RestBPM", 
+                  "Duration", "CaloriesBurned", "WorkoutType", "FatPct", "WaterIntake", "Freq", 
+                  "ExpLvl", "BMI")
+
+```
+
+Let's start off with my initial guess that the Frequency of gym attendance is determined by variables such as age, gender, weight, height, and bpm
+```{r MLR Intial Guess}
+#multiple linear regression of different variables
+model <- lm(Freq ~ Age + Gender + Weight + Height + AvgBPM, data = gym_data)
+summary(model)
+```
+Based off this initial guess, it looks like there is no significant relationship between these variables in the model based off of all of the p-values. And looking at the adjusted R squared shows the modes does a pretty bad job at explain the variance of the data. And with the F-statistic and p-value so low, it appears that the model is not very useful at all. The adjusted R squared also suggest that this initial guess should be disregarded.
+
+
+
+So now let's create a correlation matrix to see which variables are correlated to try and make a better model.
+
+```{r Corr Matrix}
+#correlation matrix of all numerical variables
+gym_numeric <- gym_data %>% select(where(is.numeric))
+cor_matrix <- cor(gym_numeric)
+corrplot(cor_matrix, method = "color", tl.srt = 45, tl.cex = .75)
+
+```
+
+
+
+
+
+Let's say we want to see if some predictor variables have an impact on the frequency of attendance on gym goers.
+So let's compute a multiple linear regression model for Frequency with Duration, Fat Percentage, and Experience Level as the predictor variables due to their relatively high correlation with Frequency
+
+```{r MLR Freq ~ Duration + FatPct + ExpLvl}
+#multiple linear regression of different variables
+model <- lm(Freq ~ Duration + FatPct + ExpLvl, data = gym_data)
+summary(model)
+```
+Just based off the P-values it looks like only the ExpLvl variable has predictive power for the Frequency of gym attendance. 
+And looking at the F-statistic, it appears that the model is a lot more useful when it comes to explaining the variablility of the data.
+And our adjusted R squared looks a lot better but we'll see if it can get improved.
+
+
+
+So let's try the full model to see if any other data has a significant impact on regression.
+
+```{r MLR Full Model}
+#multiple linear regression of different variables
+model <- lm(Freq ~ Age + Gender + Weight + Height + MaxBPM + AvgBPM + RestBPM + 
+            Duration + CaloriesBurned + FatPct + WaterIntake + ExpLvl + BMI + WorkoutType, data = gym_data)
+summary(model)
+```
+
+
+
+Just based off the P-values it looks like only the ExpLvl Data set has predictive power for the Frequency of gym attendance. So let's just compute an SLR model between Freq and ExpLvl. The F statistic and adjusted R squared also went down so this model is less useful.
+
+
+
+```{r SLR}
+#single linear regression of different variables
+model <- lm(Freq ~ ExpLvl, data = gym_data)
+summary(model)
+
+#residual diagnostics
+par(mfrow = c(2, 2))
+plot(model)  
+
+```
+If we look at the P value for the F statistic, we see that it is significant meaning that it is useful model with this particular regression when it comes to explained the variance of the data. And seeing how the p-value hardly dropped, it seems essentially most of all of the regression model was explained by the Experience level of the gym goers. And based off the positive coefficient, as experience level goes up, so does the frequency of attendance. the Diagnostic plots show that the residuals could be more normally distributed which we can explore in the plot below.
+
+
+Lets plot this interaction below using ggplot:
+```{r SLR Plot}
+ggplot(gym_data, aes(x = ExpLvl, y = Freq)) +
+  geom_point(color = "blue") +  # Scatter plot points
+  geom_smooth(method = "lm", color = "red", se = TRUE) +  # Regression line with confidence interval
+  ggtitle("Frequency of Attendance vs Experience Level") +
+  xlab("Experience Level") +
+  ylab("Visits per Week") +
+  theme_minimal()
+
+```
+This plot helps explain the QQ plot from above but also shows the linear relationship of the model.
+
+
+Now let's try adding some interaction terms that may help explain the regression model more:
+```{r MLR Interactions}
+#single linear regression of different variables
+model_interaction <- lm(Freq ~ ExpLvl +  ExpLvl*WorkoutType + ExpLvl*Gender, data = gym_data)
+summary(model_interaction)
+
+```
+And based off that it seems that only Experience level once again has any significance when it comes to this regression.
+
+
+
+
+
+
+
+Let's take a step back from Frequency as a predictor variable and start doing multivariate analysis with multiple response and predictor variables using the cbind: 
+
+```{r MANOVA 1}
+manova_model <- manova(cbind(Freq, Duration, CaloriesBurned) ~ ExpLvl + Gender + WorkoutType + WaterIntake, data = gym_data)
+
+# View the summary of the MANOVA
+summary(manova_model)
+
+```
+So based off the output, it appears that ExpLvl, Gender, and WWater Intake have a significant predictive effect on the response variables.
+
+So let's do a Multivariate Analysis of these variables:
+
+```{r MLR pt.2}
+
+#compute multivariate linear regression between the variables
+mlm1 <- lm(cbind(Freq, Duration, CaloriesBurned) ~ ExpLvl + Gender + WorkoutType + WaterIntake, data = gym_data)
+summary(mlm1)
+```
+Now to begin our final interpretation of the data of our multivariate analysis. 
+For the response variable Frequency, it appears that as before, ExpLvl is the only predictor variable with significance to the model with Frequency increasing by 1.034593 in our model as ExpLvl increases by one unit.
+
+For the response variable Duration it looks like ExpLvl, Gender, and Water Intake have a significant affect on our response variable, with Duration increasing by 0.336064 as ExpLvl increases by one unit, -0.069584 if the sex is male, and 0.074597 as water increases by one unit
+
+For the response variable Calories it looks like ExpLvl, Gender, and Water Intake  have a significant affect on our response variable, with Calories increasing by 244.798 as ExpLvl increases by one unit, 45.251 if the sex is male, and 45.385 as water increases by one unit.
+
+So it looks like even if Males are in the gym for less time, they are actually burning more calories. And the amount of calories burned seems to be impacted by Experience level, which may be correlated to the higher metabolism of those with higher experience levels.
+
+
+
