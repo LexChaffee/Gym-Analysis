@@ -677,6 +677,168 @@ if the sex is male, and 45.385 as water increases by one unit.</p>
 actually burning more calories. And the amount of calories burned seems
 to be impacted by Experience level, which may be correlated to the
 higher metabolism of those with higher experience levels.</p>
+<div id="stepwise-regression" class="section level1">
+<h1>Stepwise Regression</h1>
+<p>Let’s now try creating a better model using stepwise regression:
+Let’s also redefine the scope of the project to try and create a model
+that explains/predicts calories burned using significant predictor
+variables.</p>
+<pre class="r"><code># Create full model and empty model
+full.model &lt;- lm(CaloriesBurned ~ . , data = gym_data)
+empty.model &lt;- lm(CaloriesBurned ~ 1, data = gym_data)
+# k = 2 for AIC selection
+step.model &lt;- step(empty.model,
+scope = list(lower = empty.model,
+upper = full.model),
+direction = &quot;both&quot;, k = 2) </code></pre>
+<pre><code>## Start:  AIC=10914.47
+## CaloriesBurned ~ 1
+## 
+##               Df Sum of Sq      RSS     AIC
+## + Duration     1  59587644 12664418  9222.1
+## + ExpLvl       1  34812177 37439885 10276.8
+## + FatPct       1  25804389 46447672 10486.6
+## + Freq         1  23983997 48268064 10524.0
+## + WaterIntake  1   9204877 63047184 10783.9
+## + AvgBPM       1   8335577 63916485 10797.2
+## + Age          1   1728668 70523393 10892.9
+## + Gender       1   1639714 70612347 10894.1
+## + Weight       1    658177 71593884 10907.6
+## + Height       1    538710 71713351 10909.2
+## + BMI          1    258038 71994024 10913.0
+## &lt;none&gt;                     72252061 10914.5
+## + RestBPM      1     19713 72232348 10916.2
+## + MaxBPM       1       316 72251746 10916.5
+## + WorkoutType  3    211670 72040391 10917.6
+## 
+## Step:  AIC=9222.13
+## CaloriesBurned ~ Duration
+## 
+##               Df Sum of Sq      RSS     AIC
+## + AvgBPM       1   7638999  5025418  8324.8
+## + Gender       1   1890050 10774368  9066.9
+## + Age          1   1348647 11315771  9114.6
+## + Weight       1    840624 11823794  9157.3
+## + WaterIntake  1    778627 11885791  9162.4
+## + Height       1    660634 12003784  9172.0
+## + FatPct       1    527523 12136895  9182.7
+## + BMI          1    311481 12352937  9199.9
+## + RestBPM      1     72339 12592079  9218.6
+## &lt;none&gt;                     12664418  9222.1
+## + Freq         1      9606 12654812  9223.4
+## + MaxBPM       1      3579 12660839  9223.9
+## + ExpLvl       1        26 12664392  9224.1
+## + WorkoutType  3     20930 12643488  9226.5
+## - Duration     1  59587644 72252061 10914.5
+## 
+## Step:  AIC=8324.8
+## CaloriesBurned ~ Duration + AvgBPM
+## 
+##               Df Sum of Sq      RSS     AIC
+## + Gender       1   1816143  3209275  7890.4
+## + Age          1   1593837  3431581  7955.6
+## + WaterIntake  1    817031  4208387  8154.2
+## + Weight       1    791086  4234332  8160.1
+## + Height       1    728087  4297331  8174.5
+## + FatPct       1    537499  4487920  8216.7
+## + BMI          1    248214  4777204  8277.5
+## + RestBPM      1     10720  5014698  8324.7
+## &lt;none&gt;                      5025418  8324.8
+## + ExpLvl       1      2627  5022791  8326.3
+## + MaxBPM       1      2555  5022863  8326.3
+## + Freq         1       490  5024928  8326.7
+## + WorkoutType  3      8522  5016897  8329.1
+## - AvgBPM       1   7638999 12664418  9222.1
+## - Duration     1  58891066 63916485 10797.2
+## 
+## Step:  AIC=7890.44
+## CaloriesBurned ~ Duration + AvgBPM + Gender
+## 
+##               Df Sum of Sq      RSS     AIC
+## + Age          1   1686833  1522442  7166.8
+## + Weight       1     17826  3191450  7887.0
+## + RestBPM      1      7332  3201943  7890.2
+## + WorkoutType  3     19945  3189330  7890.4
+## + Height       1      6743  3202532  7890.4
+## + BMI          1      6743  3202532  7890.4
+## &lt;none&gt;                      3209275  7890.4
+## + WaterIntake  1      3050  3206225  7891.5
+## + FatPct       1      2926  3206349  7891.6
+## + MaxBPM       1      1299  3207977  7892.0
+## + ExpLvl       1       611  3208664  7892.3
+## + Freq         1         9  3209266  7892.4
+## - Gender       1   1816143  5025418  8324.8
+## - AvgBPM       1   7565092 10774368  9066.9
+## - Duration     1  59137915 62347190 10775.0
+## 
+## Step:  AIC=7166.85
+## CaloriesBurned ~ Duration + AvgBPM + Gender + Age
+## 
+##               Df Sum of Sq      RSS     AIC
+## + RestBPM      1      7670  1514773  7163.9
+## &lt;none&gt;                      1522442  7166.8
+## + FatPct       1      2588  1519854  7167.2
+## + BMI          1      2580  1519863  7167.2
+## + Weight       1      2507  1519935  7167.2
+## + WorkoutType  3      7472  1514970  7168.1
+## + Freq         1      1175  1521267  7168.1
+## + ExpLvl       1       325  1522117  7168.6
+## + MaxBPM       1       243  1522199  7168.7
+## + Height       1       175  1522267  7168.7
+## + WaterIntake  1         1  1522441  7168.8
+## - Age          1   1686833  3209275  7890.4
+## - Gender       1   1909139  3431581  7955.6
+## - AvgBPM       1   7814842  9337284  8929.6
+## - Duration     1  58711474 60233916 10743.5
+## 
+## Step:  AIC=7163.93
+## CaloriesBurned ~ Duration + AvgBPM + Gender + Age + RestBPM
+## 
+##               Df Sum of Sq      RSS     AIC
+## &lt;none&gt;                      1514773  7163.9
+## + Weight       1      2972  1511800  7164.0
+## + BMI          1      2954  1511819  7164.0
+## + FatPct       1      2328  1512445  7164.4
+## + Freq         1      1143  1513630  7165.2
+## + WorkoutType  3      7109  1507663  7165.4
+## + ExpLvl       1       256  1514517  7165.8
+## + Height       1       211  1514561  7165.8
+## + MaxBPM       1       148  1514625  7165.8
+## + WaterIntake  1         0  1514772  7165.9
+## - RestBPM      1      7670  1522442  7166.8
+## - Age          1   1687171  3201943  7890.2
+## - Gender       1   1905598  3420371  7954.4
+## - AvgBPM       1   7757840  9272613  8924.8
+## - Duration     1  58717021 60231794 10745.4</code></pre>
+<p>Using stepwise regression, we find that the best model of Calories
+Burned are Duration, AvgBPM, Gender, Age, RestBPM.</p>
+<p>Let’s test that with an Muiltiple Linear Regression</p>
+<pre class="r"><code>mlr_model &lt;- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + RestBPM, data = gym_data)
+summary(mlr_model)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = CaloriesBurned ~ Duration + AvgBPM + Gender + Age + 
+##     RestBPM, data = gym_data)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -127.488  -25.236   -2.618   22.999  176.554 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -830.99325   17.32206 -47.973   &lt;2e-16 ***
+## Duration     716.89529    3.70283 193.607   &lt;2e-16 ***
+## AvgBPM         6.24407    0.08873  70.374   &lt;2e-16 ***
+## GenderMale    88.67187    2.54232  34.878   &lt;2e-16 ***
+## Age           -3.42446    0.10435 -32.819   &lt;2e-16 ***
+## RestBPM        0.38415    0.17361   2.213   0.0272 *  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 39.58 on 967 degrees of freedom
+## Multiple R-squared:  0.979,  Adjusted R-squared:  0.9789 
+## F-statistic:  9031 on 5 and 967 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
 
 
 

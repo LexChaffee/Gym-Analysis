@@ -123,7 +123,7 @@ And based off that it seems that only Experience level once again has any signif
 
 
 
-Let's take a step back from Frequency as a predictor variable and start doing multivariate analysis with multiple reponse and predictor variables using the cbind: 
+Let's take a step back from Frequency as a predictor variable and start doing multivariate analysis with multiple response and predictor variables using the cbind: 
 
 ```{r MANOVA 1}
 manova_model <- manova(cbind(Freq, Duration, CaloriesBurned) ~ ExpLvl + Gender + WorkoutType + WaterIntake, data = gym_data)
@@ -132,24 +132,28 @@ manova_model <- manova(cbind(Freq, Duration, CaloriesBurned) ~ ExpLvl + Gender +
 summary(manova_model)
 
 ```
+So based off the output, it appears that ExpLvl, Gender, and WWater Intake have a significant predictive effect on the response variables.
 
 So let's do a Multivariate Analysis of these variables:
 
 ```{r MLR pt.2}
 
 #compute multivariate linear regression between the variables
+mlm1 <- lm(cbind(Freq, Duration, CaloriesBurned) ~ ExpLvl + Gender + WorkoutType + WaterIntake, data = gym_data)
 summary(mlm1)
 ```
 Now to begin our final interpretation of the data of our multivariate analysis. 
 For the response variable Frequency, it appears that as before, ExpLvl is the only predictor variable with significance to the model with Frequency increasing by 1.034593 in our model as ExpLvl increases by one unit.
 
+For the response variable Duration it looks like ExpLvl, Gender, and Water Intake have a significant affect on our response variable, with Duration increasing by 0.336064 as ExpLvl increases by one unit, -0.069584 if the sex is male, and 0.074597 as water increases by one unit
 
+For the response variable Calories it looks like ExpLvl, Gender, and Water Intake  have a significant affect on our response variable, with Calories increasing by 244.798 as ExpLvl increases by one unit, 45.251 if the sex is male, and 45.385 as water increases by one unit.
 
 So it looks like even if Males are in the gym for less time, they are actually burning more calories. And the amount of calories burned seems to be impacted by Experience level, which may be correlated to the higher metabolism of those with higher experience levels.
 
 
 
-# Logistic Regression
+# Stepwise Regression
 
 Let's now try creating a better model using stepwise regression:
 Let's also redefine the scope of the project to try and create a model that explains/predicts calories burned using significant predictor variables. 
