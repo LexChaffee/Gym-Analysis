@@ -60,7 +60,35 @@ print(missing_table, row.names = FALSE)
 ```
 None of the data is missing making analysis of the data easier. 
 
+```{r}
+#separate categorical from continuous
+categorical <- gym_data |> select(c('Gender', 'WorkoutType', 'Freq', 'ExpLvl'))
+continous <- gym_data |> select(-colnames(categorical))
+
+```
+
 ## Unimodal EDA
+
+```{r}
+qqnorm(gym_data$Weight, main = "Normal Q-Q Plot (Normal Data)")
+qqline(gym_data$Weight, col = "red")
+```
+```{r}
+# Loop through each variable to create a QQ plot
+for (variable_name in colnames(continous)) {
+  print(variable_name)
+  qqnorm(gym_data[[variable_name]],
+         main = paste("Normal Q-Q Plot for", variable_name))
+
+  # Add a red line to the QQ plot for visual comparison
+  qqline(gym_data[[variable_name]], col = "red")
+
+}
+
+```
+
+
+
 
 # Check for Multicollinearity
 
