@@ -16,6 +16,21 @@ library(corrplot)
 library(readr)
 library(tidyverse)
 ```
+Age: Age of the gym member.
+Gender: Gender of the gym member (Male or Female).
+Weight (kg): Member’s weight in kilograms.
+Height (m): Member’s height in meters.
+Max_BPM: Maximum heart rate (beats per minute) during workout sessions.
+Avg_BPM: Average heart rate during workout sessions.
+Resting_BPM: Heart rate at rest before workout.
+Session_Duration (hours): Duration of each workout session in hours.
+Calories_Burned: Total calories burned during each session.
+Workout_Type: Type of workout performed (e.g., Cardio, Strength, Yoga, HIIT).
+Fat_Percentage: Body fat percentage of the member.
+Water_Intake (liters): Daily water intake during workouts.
+Workout_Frequency (days/week): Number of workout sessions per week.
+Experience_Level: Level of experience, from beginner (1) to expert (3).
+BMI: Body Mass Index, calculated from height and weight.
 
 # EDA 
 ```{r Data, echo=FALSE, results="hide", message=FALSE, warning=FALSE}
@@ -63,31 +78,91 @@ None of the data is missing making analysis of the data easier.
 ```{r}
 #separate categorical from continuous
 categorical <- gym_data |> select(c('Gender', 'WorkoutType', 'Freq', 'ExpLvl'))
-continous <- gym_data |> select(-colnames(categorical))
-
+continuous <- gym_data |> select(-colnames(categorical))
 ```
 
-## Unimodal EDA
+## Univariate EDA
 
-```{r}
-qqnorm(gym_data$Weight, main = "Normal Q-Q Plot (Normal Data)")
-qqline(gym_data$Weight, col = "red")
-```
 ```{r}
 # Loop through each variable to create a QQ plot
-for (variable_name in colnames(continous)) {
-  print(variable_name)
+for (variable_name in colnames(continuous)) {
   qqnorm(gym_data[[variable_name]],
          main = paste("Normal Q-Q Plot for", variable_name))
-
-  # Add a red line to the QQ plot for visual comparison
   qqline(gym_data[[variable_name]], col = "red")
-
 }
 
 ```
+```{r}
+# Verify normality using a Shapiro-Wilk's test
+shapiro_results <- lapply(continuous, shapiro.test)
+
+print(shapiro_results_lapply)
+```
+After running this test we see that there is no continuous variable that has normality. This means going forward we have to use to a non-parametric test if we perform any testing. 
+
+Now let's examine the categorical variables
+```{r}
+for (variable_name in colnames(categorical)) {
+  p <- ggplot(categorical, aes_string(x = variable_name)) +
+    geom_bar(fill = "steelblue", width = 0.8) 
+  print(p)
+}
+
+```
+Nothing too special is seen in the categorical variables but more may be revealed during bivariate analysis
+
+## Bivariate Analysis
+
+Let's make scatterplots to examine the relationship of continous variables with eachother
+```{r}
+vars <- colnames(continuous)
+
+# Loop through all combinations of two different continuous variables
+for (i in 1:(length(vars)-1)) {
+  for (j in (i+1):length(vars)) {
+    x_var <- vars[i]
+    y_var <- vars[j]
+    
+    p <- ggplot(continuous, aes_string(x = x_var, y = y_var)) +
+      geom_point(color = "steelblue", alpha = 0.6) +
+      labs(title = paste("Scatterplot of", x_var, "vs", y_var),
+           x = x_var,
+           y = y_var) +
+      theme_minimal()
+    
+    print(p)
+  }
+}
+```
+
+Now let's make boxplots to compare continuous to categorical variables so the continuous variables are across different levels
+```{r}
+cat_vars <- colnames(categorical)
+cont_vars <- colnames(continuous)
+
+# Loop through all categorical-continuous combinations
+for (cat_var in cat_vars) {
+  for (cont_var in cont_vars) {
+    p <- ggplot(gym_data, aes_string(x = cat_var, y = cont_var)) +
+      geom_boxplot(fill = "steelblue", alpha = 0.7) +
+      labs(title = paste("Boxplot of", cont_var, "by", cat_var),
+           x = cat_var,
+           y = cont_var) +
+      theme_minimal()
+    
+    print(p)
+  }
+}
+```
 
 
+
+
+Let's create a correlation matrix of the continuous variables
+```{r}
+mydata.cor = cor(continuous, method = c("spearman"))
+mydata.cor
+```
 
 
 # Check for Multicollinearity
