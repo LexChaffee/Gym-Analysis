@@ -77,6 +77,9 @@ None of the data is missing making analysis of the data easier.
 
 ```{r}
 #separate categorical from continuous
+gym_data$Freq <- as.factor(gym_data$Freq)
+gym_data$ExpLvl <- as.factor(gym_data$ExpLvl)
+
 categorical <- gym_data |> select(c('Gender', 'WorkoutType', 'Freq', 'ExpLvl'))
 continuous <- gym_data |> select(-colnames(categorical))
 ```
@@ -96,7 +99,7 @@ for (variable_name in colnames(continuous)) {
 # Verify normality using a Shapiro-Wilk's test
 shapiro_results <- lapply(continuous, shapiro.test)
 
-print(shapiro_results_lapply)
+print(shapiro_results)
 ```
 After running this test we see that there is no continuous variable that has normality. This means going forward we have to use to a non-parametric test if we perform any testing. 
 
@@ -134,6 +137,25 @@ for (i in 1:(length(vars)-1)) {
   }
 }
 ```
+Linear:
+There might be a slight correlation between Age and calories burned
+Height vs Water Intake and Height vs BMI seem to be slightly correlated
+Weight and BMI are strongly correlated
+Duration and calories burned are strongly correlated
+Calories Burned vs Fat Pct
+
+Strange Boundaries: 
+The relationship between weight and height seems to have strange boundaries (look at data source)
+Weight and FatPct also has strange boundaries and an outlier group
+Durration vs FatPct
+Durrations vs FatPct
+Durration vs BMI
+
+Spikes:
+Weight and duration has an interesting relationship as there are two spikes in durration for certain weights
+Weight and Calories burned also has an similar relation as above 
+
+
 
 Now let's make boxplots to compare continuous to categorical variables so the continuous variables are across different levels
 ```{r}
@@ -154,18 +176,55 @@ for (cat_var in cat_vars) {
   }
 }
 ```
+Weight, Height, FatPct, WaterIntake, appears to differ by gender
+Perhaps CaloriesBurned, BMI has a difference across gender
+We can test this using a t-test
 
+Duration appears to differ across Freq
+CaloriesBurned appears to differ across Freq
+FatPct appears to differ across Freq 
+Water intake might differ across Freq
+
+Durration appears to differ across ExpLvL
+CaloriesBurned appears to differ across ExpLvL
+FatPct appears to differ across ExpLvL
+Water intake might differ across ExpLvL
+
+Between workout type there doesn't appear to be any significant differences across levels
 
 
 
 Let's create a correlation matrix of the continuous variables
 ```{r}
 mydata.cor = cor(continuous, method = c("spearman"))
-mydata.cor
+
+
+corr_mat=cor(continuous,method="s") #create Spearman correlation matrix
+
+library("corrplot")
+corrplot(corr_mat, method = "color",
+         type = "upper", order = "hclust",
+         addCoef.col = "black",
+         tl.col = "black",
+         number.cex = 0.7, # Adjust this value to make the numbers smaller
+         cl.cex = 0.7)    # Adjust this value to make the legend text smaller
+
 ```
 
 
+
+Our Redefined scope is trying to predict CaloriesBurned per session based of predictor variables:
 # Check for Multicollinearity
+```{r}
+# Build an inclusive model
+full.model <- lm(CaloriesBurned ~ . , data = gym_data)
+
+library(car)
+# Calculating VIF
+vif_values <- vif(full.model)
+vif_values
+```
+
 
 
 
