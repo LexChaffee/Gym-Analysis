@@ -152,7 +152,7 @@ Durrations vs FatPct
 Durration vs BMI
 
 Spikes:
-Weight and duration has an interesting relationship as there are two spikes in durration for certain weights
+Weight and duration has an interesting relationship as there are two spikes in duration for certain weights
 Weight and Calories burned also has an similar relation as above 
 
 
@@ -178,19 +178,51 @@ for (cat_var in cat_vars) {
 ```
 Weight, Height, FatPct, WaterIntake, appears to differ by gender
 Perhaps CaloriesBurned, BMI has a difference across gender
-We can test this using a t-test
+We can test this using a Wilcoxon Rank Test
+```{r}
+#use Wilcoxon rank test to see if there is a statsitical difference because Gender is binary
+wilcox.test(Weight ~ Gender, data = gym_data)
+wilcox.test(Height ~ Gender, data = gym_data)
+wilcox.test(FatPct ~ Gender, data = gym_data)
+wilcox.test(WaterIntake ~ Gender, data = gym_data)
+wilcox.test(CaloriesBurned ~ Gender, data = gym_data)
+wilcox.test(BMI ~ Gender, data = gym_data)
+
+```
+All variables  differ by gender
+
+
 
 Duration appears to differ across Freq
 CaloriesBurned appears to differ across Freq
 FatPct appears to differ across Freq 
 Water intake might differ across Freq
+```{r}
+#use kruskal wallis to test difference accorss Freq
+kruskal.test(Duration ~ Freq, data = gym_data)
+kruskal.test(CaloriesBurned ~ Freq, data = gym_data)
+kruskal.test(FatPct ~ Freq, data = gym_data)
+kruskal.test(WaterIntake ~ Freq, data = gym_data)
+```
+All variables  differ by freq
 
-Durration appears to differ across ExpLvL
+
+Duration appears to differ across ExpLvL
 CaloriesBurned appears to differ across ExpLvL
 FatPct appears to differ across ExpLvL
 Water intake might differ across ExpLvL
+```{r}
+#use kruskal wallis to test difference accorss ExpLvl
+kruskal.test(Duration ~ ExpLvl, data = gym_data)
+kruskal.test(CaloriesBurned ~ ExpLvl, data = gym_data)
+kruskal.test(FatPct ~ ExpLvl, data = gym_data)
+kruskal.test(WaterIntake ~ ExpLvl, data = gym_data)
+```
+All variables  differ by ExpLvl
 
 Between workout type there doesn't appear to be any significant differences across levels
+
+
 
 
 
@@ -210,12 +242,19 @@ corrplot(corr_mat, method = "color",
          cl.cex = 0.7)    # Adjust this value to make the legend text smaller
 
 ```
-
+Nothing seems to be too correlated so we might have to look for an interaction or reconsider if we can predict calories burned.
 
 
 Our Redefined scope is trying to predict CaloriesBurned per session based of predictor variables:
 # Check for Multicollinearity
 ```{r}
+#make categorical variables into factors
+gym_data$Gender <- as.factor(gym_data$Gender)
+gym_data$WorkoutType <- as.factor(gym_data$WorkoutType)
+gym_data$Freq <- as.factor(gym_data$Freq)
+gym_data$ExpLvl <- as.factor(gym_data$ExpLvl)
+
+
 # Build an inclusive model
 full.model <- lm(CaloriesBurned ~ . , data = gym_data)
 
@@ -224,48 +263,211 @@ library(car)
 vif_values <- vif(full.model)
 vif_values
 ```
+Due to a high VIF we will try to remove Weight to see if the VIF decreases
+```{r}
+# Build an inclusive model
+full.model <- lm(CaloriesBurned ~ Age + Gender + Height + MaxBPM + AvgBPM + RestBPM +
+                 Duration + WorkoutType + FatPct + WaterIntake + Freq + ExpLvl + BMI,
+                 data = gym_data)
+
+# Calculating VIF
+vif_values <- vif(full.model)
+vif_values
+```
+That dealt with our multicollinearity issue so let's move forward with our analysis.
 
 
 
-
-
-
-
-
+# Candidate Model Selection
 Split the dataset into a 70/30 train/test datasets
 ```{r}
+#remove weight from our dataset
+gym_data_1 <- gym_data %>% select(-Weight)
+
 set.seed(123)
+gym_data_1 <- gym_data_1 %>% mutate(id = row_number())
 
-gym_data <- gym_data %>% mutate(id = row_number())
+train <- gym_data_1 %>% sample_frac(0.7)
 
-train <- gym_data %>% sample_frac(0.7)
-
-test <- anti_join(gym_data, train, by = 'id')
+test <- anti_join(gym_data_1, train, by = 'id')
 ```
 
 
 # Stepwise Regression
-
-Let's now try creating a better model using stepwise regression:
-
-```{r}
-# Create full model and empty model
+## Explainatory model with no interactions
+```{r }
+# Create full model with interactions and empty model
 full.model <- lm(CaloriesBurned ~ . , data = train)
 empty.model <- lm(CaloriesBurned ~ 1, data = train)
 # k = 2 for AIC selection
 step.model <- step(empty.model,
 scope = list(lower = empty.model,
 upper = full.model),
-direction = "both", k = 2) 
+direction = "both",  #k = qchisq(.15, 1, lower.tail = FALSE) 
+# k = log(nrow(train))
+ k = 2
+) 
 
 ```
-Using stepwise regression, we find that the best model of Calories Burned are Duration, AvgBPM, Gender, Age, Height, and RestBPM.
 
-Let's test that with an Multiple Linear Regression model
+AIC Selection Model:
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Height + 
+    RestBPM
+    
+    
+BIC Selection Model:
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age
+
+P-Value Selection Model .15: - same as AIC
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Height + 
+    RestBPM
+
+P-Value Selection Model .005: - same as BIC
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age
+
+
+
+Let's now compare these models across different metrics
 
 ```{r}
-mlr_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Height + RestBPM, data = gym_data)
-summary(mlr_model)
+#AIC Selection Model:
+aic_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Height + 
+    RestBPM, data = gym_data)
+
+bic_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age, data = gym_data)
+
+
+```
+
+```{r}
+# Suppose you have a list of models
+models <- list(aic_model, bic_model)
+model_names <- c("AIC Model", "BIC Model")
+
+# Initialize a data frame to store results
+results <- data.frame(
+  Model = character(),
+  Adj_R2 = numeric(),
+  AIC = numeric(),
+  BIC = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through models
+for (i in seq_along(models)) {
+  m <- models[[i]]
+  
+  adj_rsquared <- summary(m)$adj.r.squared
+  model_aic <- AIC(m)
+  model_bic <- BIC(m)
+  
+  results <- rbind(results, data.frame(
+    Model = model_names[i],
+    Adj_R2 = adj_rsquared,
+    AIC = model_aic,
+    BIC = model_bic
+  ))
+}
+
+# View results
+print(results)
+
+```
+
+## Predictive models with 2 way interactions
+Let's now try creating a better model using stepwise regression:
+
+```{r }
+# Create full model with interactions and empty model
+full.model <- lm(CaloriesBurned ~ (.)^2 , data = train)
+empty.model <- lm(CaloriesBurned ~ 1, data = train)
+# k = 2 for AIC selection
+step.model <- step(empty.model,
+scope = list(lower = empty.model,
+upper = full.model),
+direction = "both",  k = qchisq(.005, 1, lower.tail = FALSE) #, trace = FALSE
+) 
+
+```
+
+AIC Selection Model:
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + BMI + WorkoutType + 
+    Duration:AvgBPM + Duration:Gender + Duration:Age + AvgBPM:Gender + 
+    AvgBPM:Age + Gender:Age + Duration:BMI + BMI:WorkoutType + 
+    Age:BMI
+    
+    
+BIC Selection Model:
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Duration:AvgBPM + 
+    Duration:Gender + Duration:Age + AvgBPM:Gender + AvgBPM:Age + 
+    Gender:Age
+
+P-Value Selection Model .15: - Same as AIC
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + BMI + WorkoutType + 
+    Duration:AvgBPM + Duration:Gender + Duration:Age + AvgBPM:Gender + 
+    AvgBPM:Age + Gender:Age + Duration:BMI + BMI:WorkoutType + 
+    Age:BMI
+
+P-Value Selection Model .005:
+CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Duration:AvgBPM + 
+    Duration:Gender + Duration:Age + AvgBPM:Gender + AvgBPM:Age + 
+    Gender:Age
+
+
+
+Let's now compare these models across different metrics
+
+```{r}
+#AIC Selection Model:
+aic_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + BMI + WorkoutType + 
+    Duration:AvgBPM + Duration:Gender + Duration:Age + AvgBPM:Gender + 
+    AvgBPM:Age + Gender:Age + Duration:BMI + BMI:WorkoutType + 
+    Age:BMI, data = gym_data)
+
+
+bic_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + BMI + WorkoutType + 
+    Duration:AvgBPM + Duration:Gender + Duration:Age + AvgBPM:Gender + 
+    AvgBPM:Age + Gender:Age + Duration:BMI + BMI:WorkoutType + 
+    Age:BMI, data = gym_data)
+
+pval.005_model <- lm(CaloriesBurned ~ Duration + AvgBPM + Gender + Age + Duration:AvgBPM + 
+    Duration:Gender + Duration:Age + AvgBPM:Gender + AvgBPM:Age + 
+    Gender:Age, data = gym_data)
+```
+
+```{r}
+# Suppose you have a list of models
+models <- list(aic_model, bic_model, pval.005_model)
+model_names <- c("AIC Model", "BIC Model", ".005 P-value Model")
+
+# Initialize a data frame to store results
+results <- data.frame(
+  Model = character(),
+  Adj_R2 = numeric(),
+  AIC = numeric(),
+  BIC = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through models
+for (i in seq_along(models)) {
+  m <- models[[i]]
+  
+  adj_rsquared <- summary(m)$adj.r.squared
+  model_aic <- AIC(m)
+  model_bic <- BIC(m)
+  
+  results <- rbind(results, data.frame(
+    Model = model_names[i],
+    Adj_R2 = adj_rsquared,
+    AIC = model_aic,
+    BIC = model_bic
+  ))
+}
+
+# View results
+print(results)
+
 ```
 
 
